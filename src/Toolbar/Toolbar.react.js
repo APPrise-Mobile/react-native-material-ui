@@ -2,19 +2,23 @@
 import React, { PureComponent, PropTypes } from 'react';
 import {
     Animated,
-    Easing,
-    Platform,
     BackAndroid,
+    findNodeHandle,
+    NativeModules,
     StyleSheet,
     Text,
+    TextInput,
+    TouchableWithoutFeedback,
     View,
+    Platform,
+    Easing,
 } from 'react-native';
 /* eslint-enable import/no-unresolved, import/extensions */
-import LeftElement from './LeftElement.react';
-import CenterElement from './CenterElement.react';
-import RightElement from './RightElement.react';
 import IconToggle from '../IconToggle';
 import isFunction from '../utils/isFunction';
+
+const UIManager = NativeModules.UIManager;
+
 
 const propTypes = {
     /**
@@ -74,6 +78,13 @@ const propTypes = {
     * This size is used for each icon on the toolbar
     */
     size: PropTypes.number,
+    /**
+    * DEPRECATED: (use style prop instead)
+    * If it's true, the toolbar has elevation set to 0 and position absolute, left, right set to 0.
+    * This prop will be deprecated probably, because it's not pretty clear what it does. I use
+    * it during the animation of toolbar, but I can use the style prop that is much more obvious.
+    */
+    translucent: PropTypes.bool,
     /**
     * Wether or not the Toolbar should show
     */
@@ -147,71 +158,86 @@ const contextTypes = {
     uiTheme: PropTypes.object.isRequired,
 };
 
-const EMPTY_BACK_BUTTON_LISTENER = { remove: () => {} };
-const getBackButtonListener = (callback, isSearchActive) => {
-    // if search is active by default we need to listen back button
-    if (isSearchActive) {
-        return BackAndroid.addEventListener('closeRequested', callback);
+function getStyles(props, context, state) {
+    const { toolbar, toolbarSearchActive } = context.uiTheme;
+
+    const local = {};
+    const isSearchActive = props.searchable && state.isSearchActive;
+
+    if (props.translucent) {
+        local.container = {
+            ...StyleSheet.absoluteFillObject,
+            elevation: 0,
+        };
     }
-
-    return EMPTY_BACK_BUTTON_LISTENER;
-};
-// const isSearchable = props => (props.searchable && props.isSearchActive) || false;
-// const getIsSearchActive = (props, state) => (props.searchable && state.isSearchActive) || false;
-
-function getStyles(props, context) {
-    const { toolbar } = context.uiTheme;
 
     return {
         container: [
             toolbar.container,
+            local.container,
+            isSearchActive && toolbarSearchActive.container,
             props.style.container,
+        ],
+        leftElementContainer: [
+            toolbar.leftElementContainer,
+            isSearchActive && toolbarSearchActive.leftElementContainer,
+            props.style.leftElementContainer,
+        ],
+        leftElement: [
+            toolbar.leftElement,
+            isSearchActive && toolbarSearchActive.leftElement,
+            props.style.leftElement,
+        ],
+        centerElementContainer: [
+            toolbar.centerElementContainer,
+            isSearchActive && toolbarSearchActive.centerElementContainer,
+            props.style.centerElementContainer,
+        ],
+        titleText: [
+            toolbar.titleText,
+            isSearchActive && toolbarSearchActive.titleText,
+            props.style.titleText,
+        ],
+        rightElementContainer: [
+            toolbar.rightElementContainer,
+            isSearchActive && toolbarSearchActive.rightElementContainer,
+            props.style.rightElementContainer,
+        ],
+        rightElement: [
+            toolbar.rightElement,
+            isSearchActive && toolbarSearchActive.rightElement,
+            props.style.rightElement,
         ],
     };
 }
+const addBackButtonListener = callback => BackAndroid.addEventListener('closeRequested', callback);
 
 class Toolbar extends PureComponent {
     constructor(props) {
         super(props);
 
-        const isSearchActive = props.isSearchActive || false;
-        this.backButtonListener = getBackButtonListener(
-                                        this.onSearchCloseRequested,
-                                        isSearchActive,
-                                    );
+        // if search is active by default we need to listen back button
+        if (props.isSearchActive) {
+            this.backButtonListener = addBackButtonListener(this.onSearchCloseRequested);
+        } else {
+            this.backButtonListener = { remove: () => {} };
+        }
 
         this.state = {
-            // indicates if searc is activated
-            isSearchActive,
-            // value for serach input
+            isSearchActive: props.isSearchActive,
             searchValue: '',
-            // everything around background animation
-            defaultScaleValue: new Animated.Value(isSearchActive ? 0.01 : 1),
-            searchScaleValue: new Animated.Value(isSearchActive ? 1 : 0.01),
-            radius: 0,
-            diameter: 0,
-            // it'll change z index after the animation is complete
-            order: isSearchActive ? 'searchFirst' : 'defaultFirst',
-            // toolbar animation - you can hide toolbar via hidden prop
-            positionValue: new Animated.Value(0),
+            moveAnimated: new Animated.Value(0),
         };
     }
     componentWillReceiveProps(nextProps) {
-        // there should be also posibility to change search through props, so we need to check
-        // props first and then we should check state if we need to change search state
-        if (this.props.isSearchActive !== nextProps.isSearchActive) {
-            // because nextProps.isSearchActive could be null, undefined
-            // so we need it convert to boolean
-            const nextIsSearchActive = !!nextProps.isSearchActive;
-            if (this.state.isSearchActive !== nextIsSearchActive) {
-                if (nextIsSearchActive) {
-                    this.onSearchOpenRequested();
-                } else {
-                    this.onSearchCloseRequested();
-                }
-            }
+        // if user remove searchable feature we need to remove back button listener
+        if (!nextProps.searchable) {
+            this.backButtonListener.remove();
         }
-
+        // searchable is set and isSearchActive is true, then we need to listen back button
+        if (nextProps.searchable && this.state.isSearchActive) {
+            this.backButtonListener = addBackButtonListener(this.onSearchCloseRequested);
+        }
         // if hidden prop is changed we animate show or hide
         if (nextProps.hidden !== this.props.hidden) {
             if (nextProps.hidden === true) {
@@ -221,29 +247,23 @@ class Toolbar extends PureComponent {
             }
         }
     }
-    onSearchOpenRequested = () => {
-        this.setState({
-            isSearchActive: true,
-            searchValue: '',
-            // zIndex: 'toDefaultNext',
-        });
+    onMenuPressed = (labels) => {
+        const { onRightElementPress } = this.props;
 
-        this.animateSearchBackground(() => {
-            // default scale set up back to "hidden" value
-            this.state.defaultScaleValue.setValue(0.01);
-            this.setState({ order: 'searchFirst' });
-            // on android it's typical that back button closes search input on toolbar
-            this.backButtonListener = getBackButtonListener(this.onSearchCloseRequested, true);
-        });
-    }
-    onSearchPressed = () => {
-        this.onSearchOpenRequested();
-
-        const { searchable } = this.props;
-
-        if (searchable && isFunction(searchable.onSearchPressed)) {
-            searchable.onSearchPressed();
-        }
+        UIManager.showPopupMenu(
+            findNodeHandle(this.menu),
+            labels,
+            () => {},
+            (result, index) => {
+                if (onRightElementPress) {
+                    onRightElementPress({ action: 'menu', result, index });
+                }
+            },
+        );
+    };
+    onSearchCloseRequested = () => {
+        this.onSearchClosePressed();
+        return true; // because we need to stop propagation
     }
     onSearchTextChanged = (value) => {
         const { searchable } = this.props;
@@ -254,31 +274,22 @@ class Toolbar extends PureComponent {
 
         this.setState({ searchValue: value });
     };
-    onSearchClearRequested = () => {
-        this.onSearchTextChanged('');
-    }
-    /**
-    * Android's HW/SW back button
-    */
-    onSearchCloseRequested = () => {
+    onSearchPressed = () => {
+        const { searchable } = this.props;
+
+        // on android it's typical that back button closes search input on toolbar
+        this.backButtonListener = addBackButtonListener(this.onSearchCloseRequested);
+
+        if (searchable && isFunction(searchable.onSearchPressed)) {
+            searchable.onSearchPressed();
+        }
+
         this.setState({
-            isSearchActive: false,
+            isSearchActive: true,
             searchValue: '',
         });
-
-        this.animateDefaultBackground(() => {
-            // default scale set up back to "hidden" value
-            this.state.searchScaleValue.setValue(0.01);
-            this.setState({ order: 'defaultFirst' });
-            // on android it's typical that back button closes search input on toolbar
-            this.backButtonListener = getBackButtonListener(this.onSearchCloseRequested, false);
-
-            this.onSearchClosed();
-        });
-
-        return true; // because we need to stop propagation
-    }
-    onSearchClosed = () => {
+    };
+    onSearchClosePressed = () => {
         const { searchable } = this.props;
 
         this.backButtonListener.remove();
@@ -286,44 +297,12 @@ class Toolbar extends PureComponent {
         if (searchable && isFunction(searchable.onSearchClosed)) {
             searchable.onSearchClosed();
         }
-    }
-    onLayout = (event) => {
-        const { width, height } = event.nativeEvent.layout;
-
-        // pythagorean
-        const radius = Math.sqrt(Math.pow(height, 2) + Math.pow(width, 2)); // eslint-disable-line
-        let diameter = radius * 2;
-        // if there wasn't issue in react native we wouldn't do this
-        // because there is issue in react native that we can't set scale value to 0, we need to use
-        // 0.01 and it means we still see the point even if the scale set to 0.01
-        const bgPosition = width - radius; // the correct left position of circle background
-        // we need circle to be bigger, then we won't see the 0.01 scaled point (because it'll be
-        // out of screen)
-        const pointSize = diameter * 0.01;
-        diameter += pointSize;
 
         this.setState({
-            bgPosition,
-            radius: diameter / 2,
-            diameter,
+            isSearchActive: false,
+            searchValue: '',
         });
-    }
-    animateSearchBackground = (onComplete) => {
-        Animated.timing(this.state.searchScaleValue, {
-            toValue: 1,
-            duration: 325,
-            easing: Easing.bezier(0.0, 0.0, 0.2, 1),
-            useNativeDriver: Platform.OS === 'android',
-        }).start(onComplete);
-    }
-    animateDefaultBackground = (onComplete) => {
-        Animated.timing(this.state.defaultScaleValue, {
-            toValue: 1,
-            duration: 325,
-            easing: Easing.bezier(0.0, 0.0, 0.2, 1),
-            useNativeDriver: Platform.OS === 'android',
-        }).start(onComplete);
-    }
+    };
     focusSearchField() {
         this.searchFieldRef.focus();
     }
@@ -346,112 +325,220 @@ class Toolbar extends PureComponent {
             useNativeDriver: Platform.OS === 'android',
         }).start();
     }
-    renderAnimatedBackgrounds = (styles) => {
-        const {
-            diameter,
-            bgPosition,
-            radius,
-            defaultScaleValue,
-            searchScaleValue,
-            order,
-        } = this.state;
+    renderLeftElement = (style) => {
+        const { searchable, leftElement, onLeftElementPress, size } = this.props;
 
-        const bgStyle = {
-            position: 'absolute',
-            top: -radius,
-            width: diameter,
-            height: diameter,
-            borderRadius: radius,
-        };
+        if (!leftElement && !this.state.isSearchActive) {
+            return null;
+        }
 
-        const { toolbarSearchActive } = this.context.uiTheme;
-        const container = StyleSheet.flatten(styles.container);
-        const searchActive = StyleSheet.flatten(toolbarSearchActive.container);
+        if (!this.state.isSearchActive && React.isValidElement(leftElement)) {
+            return (
+                <View style={style.leftElementContainer}>
+                    {React.cloneElement(leftElement, { key: 'customLeftElement' })}
+                </View>
+            );
+        }
 
-        const bgSearch = (
-            <Animated.View
-                key="searchBackground"
-                style={[bgStyle, {
-                    left: bgPosition,
-                    backgroundColor: searchActive.backgroundColor,
-                    transform: [{ scale: searchScaleValue }],
-                }]}
-            />
+        let iconName = leftElement;
+        let onPress = onLeftElementPress;
+
+        if (searchable && this.state.isSearchActive) {
+            iconName = 'arrow-back';
+            onPress = this.onSearchClosePressed;
+        }
+
+        const flattenLeftElement = StyleSheet.flatten(style.leftElement);
+
+        return (
+            <View style={style.leftElementContainer}>
+                <IconToggle
+                    name={iconName}
+                    color={flattenLeftElement.color}
+                    onPress={onPress}
+                    size={size}
+                    style={flattenLeftElement}
+                />
+            </View>
         );
+    }
+    renderCenterElement = (style) => {
+        const { searchable, centerElement, onPress } = this.props;
 
-        const bgDefault = (
-            <Animated.View
-                key="defaultBackground"
-                style={[bgStyle, {
-                    right: bgPosition,
-                    backgroundColor: container.backgroundColor,
-                    transform: [{ scale: defaultScaleValue }],
-                }]}
-            />
-        );
+        // there can be situastion like this:
+        // 1. Given toolbar with title and searchable feature
+        // 2. User presses search icon - isSearchActive === true
+        // 3. User writes some search text and then select searched items in list (just example)
+        // 4. Then you want to display to user he has 'n' selected items
+        // 5. So you render toolbar with another props like centerElement==="n items selected" but
+        //    you don't want user to be able search anymore (after he has selected something)
+        // 6. So this.props.searchable===null and isSearchActive === true, if you pass searchable
+        //    object again to this instance, search text and isSearchActive will be still set
+        if (searchable && this.state.isSearchActive) {
+            return (
+                <TextInput
+                    ref={(ref) => { this.searchFieldRef = ref; }}
+                    autoFocus={searchable.autoFocus}
+                    autoCapitalize={searchable.autoCapitalize}
+                    autoCorrect={searchable.autoCorrect}
+                    onChangeText={this.onSearchTextChanged}
+                    onSubmitEditing={searchable.onSubmitEditing}
+                    placeholder={searchable.placeholder}
+                    style={style.titleText}
+                    underlineColorAndroid="transparent"
+                    value={this.state.searchValue}
+                />
+            );
+        }
 
         let content = null;
 
-        if (order === 'defaultFirst') {
-            content = [bgDefault, bgSearch];
+        if (typeof centerElement === 'string') {
+            content = (
+                <Animated.View style={style.centerElementContainer}>
+                    <Text numberOfLines={1} style={style.titleText}>
+                        {centerElement}
+                    </Text>
+                </Animated.View>
+            );
         } else {
-            content = [bgSearch, bgDefault];
+            content = centerElement;
+        }
+
+        if (!content) {
+            return null;
         }
 
         return (
-            <View style={StyleSheet.absoluteFill}>
+            <TouchableWithoutFeedback key="center" onPress={onPress}>
                 {content}
+            </TouchableWithoutFeedback>
+        );
+    }
+    renderRightElement = (style) => {
+        const { rightElement, onRightElementPress, searchable, size } = this.props;
+        const { isSearchActive, searchValue } = this.state;
+
+        // if there is no rightElement and searchable feature is off then we are sure on the right
+        // is nothing
+        if (!rightElement && !searchable) {
+            return null;
+        }
+
+        let actionsMap = [];
+        let result = [];
+
+        if (rightElement) {
+            if (typeof rightElement === 'string') {
+                actionsMap.push(rightElement);
+            } else if (Array.isArray(rightElement)) {
+                actionsMap = rightElement;
+            } else if (rightElement.actions) {
+                actionsMap = rightElement.actions;
+            }
+        }
+
+        const flattenRightElement = StyleSheet.flatten(style.rightElement);
+
+        if (actionsMap) {
+            result = actionsMap.map((action, index) => {
+                if (React.isValidElement(action)) {
+                    return action;
+                }
+
+                return (
+                    <IconToggle
+                        key={index}
+                        name={action}
+                        color={flattenRightElement.color}
+                        size={size}
+                        style={flattenRightElement}
+                        onPress={() =>
+                            onRightElementPress && onRightElementPress({ action, index })
+                        }
+                    />
+                );
+            });
+        }
+
+        if (React.isValidElement(rightElement)) {
+            result.push(React.cloneElement(rightElement, { key: 'customRightElement' }));
+        }
+
+
+        // if searchable feature is on and search is active with some text, then we show clear
+        // button, to be able to clear text
+        if (searchable) {
+            if (isSearchActive && searchValue.length > 0) {
+                result.push(
+                    <IconToggle
+                        key="searchClear"
+                        name="clear"
+                        color={flattenRightElement.color}
+                        size={size}
+                        style={flattenRightElement}
+                        onPress={() => this.onSearchTextChanged('')}
+                    />,
+                );
+            } else {
+                result.push(
+                    <IconToggle
+                        key="searchIcon"
+                        name="search"
+                        color={flattenRightElement.color}
+                        size={size}
+                        onPress={this.onSearchPressed}
+                        style={flattenRightElement}
+                    />,
+                );
+            }
+        }
+
+        if (rightElement && rightElement.menu && !isSearchActive) {
+            result.push(
+                <View key="menuIcon">
+                    {/* We need this view as an anchor for drop down menu. findNodeHandle can
+                        find just view with width and height, even it needs backgroundColor :/
+                    */}
+                    <View
+                        ref={(c) => { this.menu = c; }}
+                        style={{
+                            backgroundColor: 'transparent',
+                            width: 1,
+                            height: StyleSheet.hairlineWidth,
+                        }}
+                    />
+                    <IconToggle
+                        name="more-vert"
+                        color={flattenRightElement.color}
+                        size={size}
+                        onPress={() => this.onMenuPressed(rightElement.menu.labels)}
+                        style={flattenRightElement}
+                    />
+                </View>,
+            );
+        }
+
+        return (
+            <View style={style.rightElementContainer}>
+                {result}
             </View>
         );
     }
     render() {
-        const {
-            searchable,
-            leftElement,
-            onLeftElementPress,
-            centerElement,
-            onPress,
-            rightElement,
-            onRightElementPress,
-        } = this.props;
-
-        const { isSearchActive, searchValue } = this.state;
-        // TODO: move out from render method
         const styles = getStyles(this.props, this.context, this.state);
 
         return (
             <Animated.View
-                onLayout={this.onLayout}
-                style={[
-                    styles.container,
-                    { transform: [{ translateY: this.state.positionValue }] },
-                ]}
+                style={[styles.container, {
+                    transform: [{
+                        translateY: this.state.moveAnimated,
+                    }],
+                }]}
             >
-                {this.renderAnimatedBackgrounds(styles)}
-                <LeftElement
-                    leftElement={leftElement}
-                    onLeftElementPress={onLeftElementPress}
-                    searchable={searchable}
-                    isSearchActive={isSearchActive}
-                    onSearchClose={this.onSearchCloseRequested}
-                />
-                <CenterElement
-                    centerElement={centerElement}
-                    onPress={onPress}
-                    searchable={searchable}
-                    searchValue={searchValue}
-                    isSearchActive={isSearchActive}
-                    onSearchTextChange={this.onSearchTextChanged}
-                />
-                <RightElement
-                    rightElement={rightElement}
-                    searchable={searchable}
-                    searchValue={searchValue}
-                    isSearchActive={isSearchActive}
-                    onSearchPress={this.onSearchPressed}
-                    onSearchClearRequest={this.onSearchClearRequested}
-                    onRightElementPress={onRightElementPress}
-                />
+                {this.renderLeftElement(styles)}
+                {this.renderCenterElement(styles)}
+                {this.renderRightElement(styles)}
             </Animated.View>
         );
     }
