@@ -86,7 +86,8 @@ class BottomNavigationAction extends PureComponent {
         if (React.isValidElement(icon)) {
             // we need icon to change color after it's selected, so we send the color and style to
             // custom element
-            element = React.cloneElement(icon, { style: styles.icon, color });
+            // element = React.cloneElement(icon, { style: styles.icon, color });
+            element = icon;
         } else {
             element = <Icon name={icon} style={styles.icon} color={color} />;
         }
