@@ -68,7 +68,7 @@ const propTypes = {
     style: PropTypes.shape({
         container: View.propTypes.style,
         leftElementContainer: View.propTypes.style,
-        leftElement: View.propTypes.style,
+        leftElement: IconToggle.propTypes.style,
         centerElementContainer: View.propTypes.style,
         titleText: Text.propTypes.style,
         rightElementContainer: View.propTypes.style,
