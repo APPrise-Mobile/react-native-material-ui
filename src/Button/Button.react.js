@@ -34,7 +34,10 @@ const propTypes = {
     /**
     * If specified it'll be shown before text
     */
-    icon: PropTypes.string,
+    icon: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.element,
+    ]),
     /**
     * Will enable\disable accessibility setting
     */
@@ -106,6 +109,14 @@ function getStyles(props, context, state) {
             local.text,
             props.style.text,
         ],
+        icon: [
+            button.icon,
+            !raised && buttonFlat.icon,
+            disabled && buttonDisabled.icon,
+            raised && buttonRaised.icon,
+            local.icon,
+            props.style.icon,
+        ],
     };
 }
 
@@ -142,15 +153,21 @@ class Button extends PureComponent {
             return null;
         }
 
+        let result;
 
-        return (
-            <Icon
-                name={icon}
-                color={textFlatten.color}
-                style={{ marginRight: 8 }}
-                size={24}
-            />
-        );
+        if (React.isValidElement(icon)) {
+            result = icon;
+        } else if (typeof icon === 'string') {
+            result = (
+                <Icon
+                    name={icon}
+                    color={textFlatten.color}
+                    style={styles.icon}
+                    size={24}
+                />);
+        }
+
+        return result;
     }
     render() {
         const { text, disabled, raised, upperCase, onLongPress } = this.props;
