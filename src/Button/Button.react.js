@@ -36,6 +36,10 @@ const propTypes = {
     */
     icon: PropTypes.string,
     /**
+    * Will enable\disable accessibility setting
+    */
+    allowFontScaling: PropTypes.bool,
+    /**
     * You can overide any style for this button
     */
     style: PropTypes.shape({
@@ -150,13 +154,17 @@ class Button extends PureComponent {
     }
     render() {
         const { text, disabled, raised, upperCase, onLongPress } = this.props;
+        let { allowFontScaling } = this.props;
+        if (allowFontScaling === null || allowFontScaling === undefined) {
+            allowFontScaling = true;
+        }
 
         const styles = getStyles(this.props, this.context, this.state);
 
         const content = (
             <View style={styles.container}>
                 {this.renderIcon(styles)}
-                <Text style={styles.text}>
+                <Text style={styles.text} allowFontScaling={allowFontScaling}>
                     {upperCase ? text.toUpperCase() : text}
                 </Text>
             </View>

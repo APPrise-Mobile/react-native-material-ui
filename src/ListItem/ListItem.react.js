@@ -41,6 +41,11 @@ const propTypes = {
         }),
     ]),
 
+    /**
+    * Will enable\disable accessibility setting
+    */
+    allowFontScaling: PropTypes.bool,
+
     // right side
     rightElement: PropTypes.oneOfType([
         PropTypes.element,
@@ -252,8 +257,13 @@ class ListItem extends PureComponent {
     }
     renderCenterElement = (styles) => {
         const { centerElement } = this.props;
+        let { allowFontScaling } = this.props;
         const numberOfLines = getNumberOfSecondaryTextLines(this.state.numberOfLines);
         let content = null;
+
+        if (allowFontScaling === null || allowFontScaling === undefined) {
+            allowFontScaling = true;
+        }
 
         if (React.isValidElement(centerElement)) {
             content = centerElement;
@@ -275,21 +285,33 @@ class ListItem extends PureComponent {
                 <View style={styles.textViewContainer}>
                     <View style={styles.firstLine}>
                         <View style={styles.primaryTextContainer}>
-                            <Text numberOfLines={1} style={styles.primaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={1}
+                                style={styles.primaryText}
+                            >
                                 {primaryText}
                             </Text>
                         </View>
                     </View>
                     {secondaryText &&
                         <View>
-                            <Text numberOfLines={secondLineNumber} style={styles.secondaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={secondLineNumber}
+                                style={styles.secondaryText}
+                            >
                                 {secondaryText}
                             </Text>
                         </View>
                     }
                     {tertiaryText &&
                         <View>
-                            <Text numberOfLines={thirdLineNumber} style={styles.tertiaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={thirdLineNumber}
+                                style={styles.tertiaryText}
+                            >
                                 {tertiaryText}
                             </Text>
                         </View>

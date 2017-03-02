@@ -30,6 +30,10 @@ const propTypes = {
     */
     size: PropTypes.number,
     /**
+    * Will enable\disable accessibility setting
+    */
+    allowFontScaling: PropTypes.bool,
+    /**
     * Inline style of avatar
     */
     style: PropTypes.shape({
@@ -75,6 +79,10 @@ function getStyles(props, context) {
 class Avatar extends PureComponent {
     render() {
         const { image, icon, iconSize, iconColor, text } = this.props;
+        let { allowFontScaling } = this.props;
+        if (allowFontScaling === null || allowFontScaling === undefined) {
+            allowFontScaling = true;
+        }
 
         let content = null;
         const { avatar, spacing } = this.context.uiTheme;
@@ -85,7 +93,11 @@ class Avatar extends PureComponent {
             const size = iconSize || spacing.iconSize;
             content = <Icon name={icon} color={color} size={size} />;
         } else if (text) {
-            content = <Text style={styles.content}>{text}</Text>;
+            content = (
+                <Text style={styles.content} allowFontScaling={allowFontScaling}>
+                    {text}
+                </Text>
+            );
         } else if (image) {
             content = image;
         }
