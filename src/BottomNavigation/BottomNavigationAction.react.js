@@ -29,6 +29,10 @@ const propTypes = {
     */
     onPress: PropTypes.func,
     /**
+    * Will enable\disable accessibility setting
+    */
+    allowFontScaling: PropTypes.bool,
+    /**
     * Inline style of bottom navigation
     */
     style: PropTypes.shape({
@@ -102,11 +106,16 @@ class BottomNavigationAction extends PureComponent {
 
         const iconElement = this.renderIcon(icon, styles, color);
 
+        let { allowFontScaling } = this.props;
+        if (allowFontScaling === null || allowFontScaling === undefined) {
+            allowFontScaling = true;
+        }
+
         return (
             <RippleFeedback onPress={onPress}>
                 <View style={styles.container}>
                     {iconElement}
-                    <Text style={styles.label}>{label}</Text>
+                    <Text allowFontScaling={allowFontScaling} style={styles.label}>{label}</Text>
                 </View>
             </RippleFeedback>
         );
