@@ -282,7 +282,7 @@ class ListItem extends PureComponent {
             }
             let firstLineNumber = this.props.firstLineLength ? this.props.firstLineLength : 1;
             if (firstLineNumber === 'dynamic') {
-                firstLineNumber = -1
+                firstLineNumber = 100000
             }
             const secondLineNumber = !tertiaryText ? numberOfLines : 1;
             const thirdLineNumber = tertiaryText ? numberOfLines : 1;
