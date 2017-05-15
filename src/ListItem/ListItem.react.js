@@ -22,7 +22,7 @@ const propTypes = {
     onPressValue: PropTypes.any,
     numberOfLines: React.PropTypes.oneOf([1, 2, 3, 'dynamic']),
     style: PropTypes.object,
-
+    firstLineLength: React.PropTypes.oneOf([1, 2, 3, 'dynamic']),
     // left side
     leftElement: PropTypes.oneOfType([
         PropTypes.element,
@@ -54,6 +54,7 @@ const propTypes = {
     onRightElementPress: PropTypes.func,
 };
 const defaultProps = {
+    firstLineLength: 1,
     numberOfLines: 1,
     style: {},
 };
@@ -85,10 +86,10 @@ function getNumberOfLines(props) {
 * Please see this: https://material.google.com/components/lists.html#lists-specs
 */
 function getListItemHeight(props, state) {
-    const { leftElement, dense } = props;
+    const { leftElement, dense, firstLineLength } = props;
     const { numberOfLines } = state;
 
-    if (numberOfLines === 'dynamic') {
+    if (numberOfLines === 'dynamic' || firstLineLength === 'dynamic') {
         return null;
     }
 
@@ -279,6 +280,10 @@ class ListItem extends PureComponent {
                 secondaryText = centerElement.secondaryText;
                 tertiaryText = centerElement.tertiaryText;
             }
+            let firstLineNumber = this.props.firstLineLength ? this.props.firstLineLength : 1;
+            if (firstLineNumber === 'dynamic') {
+                firstLineNumber = 100000
+            }
             const secondLineNumber = !tertiaryText ? numberOfLines : 1;
             const thirdLineNumber = tertiaryText ? numberOfLines : 1;
             content = (
@@ -287,7 +292,7 @@ class ListItem extends PureComponent {
                         <View style={styles.primaryTextContainer}>
                             <Text
                                 allowFontScaling={allowFontScaling}
-                                numberOfLines={1}
+                                numberOfLines={firstLineNumber}
                                 style={styles.primaryText}
                             >
                                 {primaryText}

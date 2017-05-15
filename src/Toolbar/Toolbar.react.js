@@ -396,7 +396,7 @@ class Toolbar extends PureComponent {
         if (typeof centerElement === 'string') {
             content = (
                 <Animated.View style={style.centerElementContainer}>
-                    <Text numberOfLines={1} style={style.titleText}>
+                    <Text allowFontScaling={false} numberOfLines={1} style={style.titleText}>
                         {centerElement}
                     </Text>
                 </Animated.View>
