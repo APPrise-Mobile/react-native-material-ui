@@ -20,6 +20,7 @@ import ListItem from './ListItem';
 import RadioButton from './RadioButton';
 import Subheader from './Subheader';
 import Toolbar from './Toolbar';
+import Snackbar from './Snackbar';
 
 module.exports = {
     COLOR,
@@ -41,5 +42,6 @@ module.exports = {
     ListItem,
     RadioButton,
     Subheader,
-    Toolbar
+    Toolbar,
+    Snackbar,
 }
