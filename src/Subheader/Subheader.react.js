@@ -42,7 +42,7 @@ class Subheader extends PureComponent {
 
         return (
             <View style={styles.container} >
-                <Text numberOfLines={lines} style={styles.text}>
+                <Text allowFontScaling={false} numberOfLines={lines} style={styles.text}>
                     {text}
                 </Text>
             </View>

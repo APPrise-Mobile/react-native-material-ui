@@ -96,7 +96,7 @@ class Checkbox extends PureComponent {
                     color={checked ? iconColor : labelColor}
                     onPress={this.onPress}
                 />
-                <Text style={styles.label}>
+                <Text allowFontScaling={false} style={styles.label}>
                     {this.props.label}
                 </Text>
             </View>
