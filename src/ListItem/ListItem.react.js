@@ -26,7 +26,7 @@ const propTypes = {
     onPressValue: PropTypes.any,
     numberOfLines: React.PropTypes.oneOf([1, 2, 3, 'dynamic']),
     style: PropTypes.object,
-
+    firstLineLength: React.PropTypes.oneOf([1, 2, 3, 'dynamic']),
     // left side
     leftElement: PropTypes.oneOfType([
         PropTypes.element,
@@ -45,6 +45,11 @@ const propTypes = {
         }),
     ]),
 
+    /**
+    * Will enable\disable accessibility setting
+    */
+    allowFontScaling: PropTypes.bool,
+
     // right side
     rightElement: PropTypes.oneOfType([
         PropTypes.element,
@@ -53,6 +58,7 @@ const propTypes = {
     onRightElementPress: PropTypes.func,
 };
 const defaultProps = {
+    firstLineLength: 1,
     numberOfLines: 1,
     style: {},
 };
@@ -84,10 +90,10 @@ function getNumberOfLines(props) {
 * Please see this: https://material.google.com/components/lists.html#lists-specs
 */
 function getListItemHeight(props, state) {
-    const { leftElement, dense } = props;
+    const { leftElement, dense, firstLineLength } = props;
     const { numberOfLines } = state;
 
-    if (numberOfLines === 'dynamic') {
+    if (numberOfLines === 'dynamic' || firstLineLength === 'dynamic') {
         return null;
     }
 
@@ -276,8 +282,13 @@ class ListItem extends PureComponent {
     }
     renderCenterElement = (styles) => {
         const { centerElement } = this.props;
+        let { allowFontScaling } = this.props;
         const numberOfLines = getNumberOfSecondaryTextLines(this.state.numberOfLines);
         let content = null;
+
+        if (allowFontScaling === null || allowFontScaling === undefined) {
+            allowFontScaling = true;
+        }
 
         if (React.isValidElement(centerElement)) {
             content = centerElement;
@@ -293,27 +304,43 @@ class ListItem extends PureComponent {
                 secondaryText = centerElement.secondaryText;
                 tertiaryText = centerElement.tertiaryText;
             }
+            let firstLineNumber = this.props.firstLineLength ? this.props.firstLineLength : 1;
+            if (firstLineNumber === 'dynamic') {
+                firstLineNumber = 100000;
+            }
             const secondLineNumber = !tertiaryText ? numberOfLines : 1;
             const thirdLineNumber = tertiaryText ? numberOfLines : 1;
             content = (
                 <View style={styles.textViewContainer}>
                     <View style={styles.firstLine}>
                         <View style={styles.primaryTextContainer}>
-                            <Text numberOfLines={1} style={styles.primaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={firstLineNumber}
+                                style={styles.primaryText}
+                            >
                                 {primaryText}
                             </Text>
                         </View>
                     </View>
                     {secondaryText &&
                         <View>
-                            <Text numberOfLines={secondLineNumber} style={styles.secondaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={secondLineNumber}
+                                style={styles.secondaryText}
+                            >
                                 {secondaryText}
                             </Text>
                         </View>
                     }
                     {tertiaryText &&
                         <View>
-                            <Text numberOfLines={thirdLineNumber} style={styles.tertiaryText}>
+                            <Text
+                                allowFontScaling={allowFontScaling}
+                                numberOfLines={thirdLineNumber}
+                                style={styles.tertiaryText}
+                            >
                                 {tertiaryText}
                             </Text>
                         </View>
@@ -379,8 +406,7 @@ class ListItem extends PureComponent {
                         onPress={() => this.onMenuPressed(rightElement.menu.labels)}
                         style={flattenRightElement}
                     />
-                </View>
-            );
+                </View>);
         }
 
         return (
