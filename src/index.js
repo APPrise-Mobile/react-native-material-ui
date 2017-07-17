@@ -44,4 +44,4 @@ module.exports = {
     Subheader,
     Toolbar,
     Snackbar,
-}
+};
