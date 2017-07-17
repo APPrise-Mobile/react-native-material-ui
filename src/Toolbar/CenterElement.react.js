@@ -119,7 +119,7 @@ class CenterElement extends PureComponent {
             );
         } else if (typeof centerElement === 'string') {
             content = (
-                <Text numberOfLines={1} style={styles.titleText}>
+                <Text allowFontScaling={false} numberOfLines={1} style={styles.titleText}>
                     {centerElement}
                 </Text>
             );
