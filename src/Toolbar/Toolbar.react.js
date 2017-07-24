@@ -384,6 +384,7 @@ class Toolbar extends PureComponent {
                     onChangeText={this.onSearchTextChanged}
                     onSubmitEditing={searchable.onSubmitEditing}
                     placeholder={searchable.placeholder}
+                    placeholderTextColor={searchable.placeholderTextColor}
                     style={style.titleText}
                     underlineColorAndroid="transparent"
                     value={this.state.searchValue}
